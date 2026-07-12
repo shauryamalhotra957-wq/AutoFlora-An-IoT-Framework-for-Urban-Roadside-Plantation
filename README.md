@@ -4,6 +4,15 @@ AutoFlora is an Arduino-based smart irrigation prototype for urban roadside plan
 
 ![AutoFlora smart irrigation architecture](docs/readme-preview.svg)
 
+## Project Snapshot
+
+| Area | Detail |
+| --- | --- |
+| Experience | Smart roadside irrigation controller |
+| Core system | Soil moisture sensing, tank-level monitoring, weather-aware pump decisions, flow telemetry |
+| Design signal | Architecture preview, pin map, decision logic, calibration notes |
+| Quality signal | Hardware safety notes, field calibration guidance, deployment roadmap |
+
 ## Why It Exists
 
 Roadside plantations are often hard to maintain manually because water need changes with soil dryness, tank level, weather, and hardware reliability. AutoFlora demonstrates a low-cost embedded system that can sense those conditions and make irrigation decisions automatically.
