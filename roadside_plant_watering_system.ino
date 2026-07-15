@@ -25,13 +25,13 @@ DHT dht(DHTPIN, DHTTYPE);
 
 // ----------------------------------------------------------------
 // SOIL SENSOR CALIBRATION  (MH Resistive Series)
-// Dry air  → ~1023  (no conductance)
-// Water    → ~300   (high conductance)
+// Dry air  -> ~1023  (no conductance)
+// Water    -> ~300   (high conductance)
 // Tune AIR_VALUE and WATER_VALUE with your actual sensor readings
 // ----------------------------------------------------------------
 #define AIR_VALUE    1023   // sensor in open air (fully dry)
 #define WATER_VALUE  300    // sensor submerged in water (fully wet)
-#define SOIL_DRY     700    // raw threshold → trigger irrigation
+#define SOIL_DRY     700    // raw threshold -> trigger irrigation
 
 // ----------------------------------------------------------------
 // SYSTEM THRESHOLDS
@@ -115,7 +115,7 @@ void setup()
 
   delay(2000);
 
-  Serial.println(F("System Ready"));
+  Serial.println(F("[READY] Sensors active; pump is in safe OFF state"));
 }
 
 // ----------------------------------------------------------------
@@ -159,8 +159,8 @@ void loop()
     int soilPercent =
       map(
         soilRaw,
-        AIR_VALUE,   // 1023 → 0 %
-        WATER_VALUE, // 300  → 100 %
+        AIR_VALUE,   // 1023 -> 0 %
+        WATER_VALUE, // 300  -> 100 %
         0,
         100
       );
@@ -251,7 +251,7 @@ void loop()
     }
     else
     {
-      Serial.println(F("DHT22 ERROR"));
+      Serial.println(F("[SENSOR ERROR] DHT22 unavailable; weather override disabled"));
     }
 
     Serial.println(F("----------------------------------------"));
@@ -282,10 +282,10 @@ void loop()
 
     Serial.println(F("----------------------------------------"));
 
-    Serial.print(F("Pump State  : "));
+    Serial.print(F("[ACTUATOR] Pump : "));
     Serial.println(pumpON ? F("ON") : F("OFF"));
 
-    Serial.print(F("Reason      : "));
+    Serial.print(F("[DECISION] Reason: "));
     Serial.println(reason);
 
     Serial.println(F("========================================"));

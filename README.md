@@ -116,3 +116,7 @@ AutoFlora-An-IoT-Framework-for-Urban-Roadside-Plantation/
 
 Use proper relay isolation, waterproofing, fuse protection, and pump power handling. Do not connect mains voltage directly unless you are qualified to work with electrical systems.
 
+## Operator Experience
+
+Serial telemetry uses explicit `READY`, `SENSOR ERROR`, `ACTUATOR`, and `DECISION` states so a field operator can distinguish readings from actions at a glance. The [operator experience guide](docs/USER_EXPERIENCE.md) documents setup, calibration, safe fallback, and future dashboard behavior.
+
