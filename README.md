@@ -45,6 +45,7 @@ Roadside plantations are often hard to maintain manually because water need chan
 - Measures tank level using ultrasonic distance.
 - Counts flow sensor pulses through an interrupt.
 - Turns the pump on only when the soil is dry and the tank is not too low.
+- Latches the pump off when commanded irrigation produces no measurable flow after the startup grace period.
 - Avoids irrigation when humidity and temperature suggest rain-like conditions.
 - Prints sensor state, flow rate, tank level, and pump decision to Serial.
 
@@ -53,6 +54,7 @@ Roadside plantations are often hard to maintain manually because water need chan
 ```text
 Read sensors
   -> check tank safety
+  -> check latched no-flow safety
   -> check rain-like weather condition
   -> check soil dryness
   -> switch pump relay
@@ -62,6 +64,7 @@ Read sensors
 The pump is disabled when:
 
 - The tank level is below the safety threshold.
+- A running pump reports less than `0.10 L/min` for two consecutive checks after a six-second startup grace period. This fault stays latched until restart so a blocked line or dry pump cannot cycle repeatedly.
 - Humidity is high and temperature is low enough to suggest rain-like conditions.
 - Soil moisture is already sufficient.
 
