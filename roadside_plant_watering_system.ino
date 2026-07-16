@@ -46,12 +46,19 @@ DHT dht(DHTPIN, DHTTYPE);
 // TIMING
 // ----------------------------------------------------------------
 #define READ_INTERVAL 2000UL
+#define FLOW_STARTUP_GRACE 6000UL
+#define MIN_FLOW_RATE 0.10
+#define NO_FLOW_TRIP_INTERVALS 2
 
 // ----------------------------------------------------------------
 // GLOBAL VARIABLES
 // ----------------------------------------------------------------
 volatile unsigned long pulseCount = 0;
 unsigned long prevMillis = 0;
+bool pumpRunning = false;
+unsigned long pumpStartedAt = 0;
+byte lowFlowIntervals = 0;
+bool flowFaultLatched = false;
 
 // ----------------------------------------------------------------
 // FLOW SENSOR INTERRUPT
@@ -140,6 +147,25 @@ void loop()
     float intervalSec = READ_INTERVAL / 1000.0;
     float flowRate = (pulses / intervalSec) / 7.5;
 
+    // A commanded pump with no measured flow can indicate a blocked line,
+    // disconnected sensor, dry pump, or failed relay. Allow startup time,
+    // then require consecutive low-flow intervals before latching safe OFF.
+    if (pumpRunning && now - pumpStartedAt >= FLOW_STARTUP_GRACE)
+    {
+      if (flowRate < MIN_FLOW_RATE)
+      {
+        if (lowFlowIntervals < 255)
+          lowFlowIntervals++;
+
+        if (lowFlowIntervals >= NO_FLOW_TRIP_INTERVALS)
+          flowFaultLatched = true;
+      }
+      else
+      {
+        lowFlowIntervals = 0;
+      }
+    }
+
     // ============================================================
     // DHT22
     // ============================================================
@@ -205,6 +231,11 @@ void loop()
       pumpON = false;
       reason = "TANK LOW - Safety Shutoff";
     }
+    else if (flowFaultLatched)
+    {
+      pumpON = false;
+      reason = "NO FLOW - Latched Safety Shutoff";
+    }
     else if (
       dhtOK &&
       humidity >= HUMIDITY_THRESHOLD &&
@@ -232,6 +263,17 @@ void loop()
       RELAY_PIN,
       pumpON ? LOW : HIGH
     );
+
+    if (pumpON && !pumpRunning)
+    {
+      pumpStartedAt = now;
+      lowFlowIntervals = 0;
+    }
+    else if (!pumpON && !flowFaultLatched)
+    {
+      lowFlowIntervals = 0;
+    }
+    pumpRunning = pumpON;
 
     // ============================================================
     // SERIAL DASHBOARD
@@ -279,6 +321,9 @@ void loop()
     Serial.print(F("Flow Rate   : "));
     Serial.print(flowRate, 2);
     Serial.println(F(" L/min"));
+
+    if (flowFaultLatched)
+      Serial.println(F("[SAFETY] No-flow fault latched; inspect the pump and restart to reset"));
 
     Serial.println(F("----------------------------------------"));
 
