@@ -1,0 +1,32 @@
+name: Arduino compile
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Prepare Arduino sketch layout
+        run: |
+          mkdir -p .ci-sketches/roadside_plant_watering_system
+          cp roadside_plant_watering_system.ino .ci-sketches/roadside_plant_watering_system/
+
+      - name: Compile sketch for Arduino Uno
+        uses: arduino/compile-sketches@v1
+        with:
+          fqbn: arduino:avr:uno
+          sketch-paths: |
+            - .ci-sketches
+          libraries: |
+            - name: DHT sensor library
