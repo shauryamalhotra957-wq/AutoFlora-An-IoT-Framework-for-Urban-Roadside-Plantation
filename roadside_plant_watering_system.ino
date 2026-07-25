@@ -42,16 +42,27 @@ DHT dht(DHTPIN, DHTTYPE);
 #define TANK_EMPTY         3.0
 #define TANK_DEPTH         30.0
 
+// YF-S201 nominal calibration: frequency (Hz) = 7.5 * flow (L/min)
+#define FLOW_CALIBRATION   7.5
+#define MIN_FLOW_LPM       0.10
+#define NO_FLOW_CYCLES     2
+
 // ----------------------------------------------------------------
 // TIMING
 // ----------------------------------------------------------------
 #define READ_INTERVAL 2000UL
+
+static_assert(AIR_VALUE > WATER_VALUE, "AIR_VALUE must be greater than WATER_VALUE");
+static_assert(TANK_EMPTY > 0 && TANK_EMPTY < TANK_DEPTH, "Tank thresholds are invalid");
 
 // ----------------------------------------------------------------
 // GLOBAL VARIABLES
 // ----------------------------------------------------------------
 volatile unsigned long pulseCount = 0;
 unsigned long prevMillis = 0;
+bool pumpWasOn = false;
+bool flowFaultLatched = false;
+byte consecutiveNoFlowCycles = 0;
 
 // ----------------------------------------------------------------
 // FLOW SENSOR INTERRUPT
@@ -127,6 +138,7 @@ void loop()
 
   if (now - prevMillis >= READ_INTERVAL)
   {
+    unsigned long elapsedMillis = now - prevMillis;
     prevMillis = now;
 
     // ============================================================
@@ -137,8 +149,32 @@ void loop()
     pulseCount = 0;
     interrupts();
 
-    float intervalSec = READ_INTERVAL / 1000.0;
-    float flowRate = (pulses / intervalSec) / 7.5;
+    float intervalSec = elapsedMillis / 1000.0;
+    float flowRate = (pulses / intervalSec) / FLOW_CALIBRATION;
+
+    // A commanded pump with no measured flow can indicate an empty
+    // supply, blocked line, disconnected sensor, or failed pump.
+    // Latch the fault after a short startup grace period and require
+    // an operator inspection + controller restart before retrying.
+    if (pumpWasOn)
+    {
+      if (flowRate < MIN_FLOW_LPM)
+      {
+        if (consecutiveNoFlowCycles < NO_FLOW_CYCLES)
+          consecutiveNoFlowCycles++;
+
+        if (consecutiveNoFlowCycles >= NO_FLOW_CYCLES)
+          flowFaultLatched = true;
+      }
+      else
+      {
+        consecutiveNoFlowCycles = 0;
+      }
+    }
+    else if (!flowFaultLatched)
+    {
+      consecutiveNoFlowCycles = 0;
+    }
 
     // ============================================================
     // DHT22
@@ -200,7 +236,12 @@ void loop()
     bool pumpON = false;
     String reason;
 
-    if (waterLevel < TANK_EMPTY)
+    if (flowFaultLatched)
+    {
+      pumpON = false;
+      reason = "NO FLOW - Pump Locked OFF";
+    }
+    else if (waterLevel < TANK_EMPTY)
     {
       pumpON = false;
       reason = "TANK LOW - Safety Shutoff";
@@ -232,6 +273,7 @@ void loop()
       RELAY_PIN,
       pumpON ? LOW : HIGH
     );
+    pumpWasOn = pumpON;
 
     // ============================================================
     // SERIAL DASHBOARD
@@ -279,6 +321,14 @@ void loop()
     Serial.print(F("Flow Rate   : "));
     Serial.print(flowRate, 2);
     Serial.println(F(" L/min"));
+
+    Serial.print(F("Flow Guard  : "));
+    if (flowFaultLatched)
+      Serial.println(F("FAULT LATCHED - Inspect pump, line, and sensor; then restart"));
+    else if (pumpON)
+      Serial.println(F("MONITORING"));
+    else
+      Serial.println(F("STANDBY"));
 
     Serial.println(F("----------------------------------------"));
 

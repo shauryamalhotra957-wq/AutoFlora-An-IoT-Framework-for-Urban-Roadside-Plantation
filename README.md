@@ -45,6 +45,7 @@ Roadside plantations are often hard to maintain manually because water need chan
 - Measures tank level using ultrasonic distance.
 - Counts flow sensor pulses through an interrupt.
 - Turns the pump on only when the soil is dry and the tank is not too low.
+- Locks the pump off when a commanded irrigation cycle produces no measurable flow.
 - Avoids irrigation when humidity and temperature suggest rain-like conditions.
 - Prints sensor state, flow rate, tank level, and pump decision to Serial.
 
@@ -61,6 +62,7 @@ Read sensors
 
 The pump is disabled when:
 
+- The flow guard detects two consecutive no-flow cycles while the pump is commanded on.
 - The tank level is below the safety threshold.
 - Humidity is high and temperature is low enough to suggest rain-like conditions.
 - Soil moisture is already sufficient.
@@ -80,6 +82,8 @@ The pump is enabled when:
 5. Calibrate `AIR_VALUE`, `WATER_VALUE`, and `SOIL_DRY` for your soil sensor.
 6. Upload to Arduino Uno.
 7. Open Serial Monitor at `9600` baud.
+
+Before leaving the pump connected, run a controlled flow-guard check: briefly close the test line, confirm that `NO FLOW - Pump Locked OFF` appears after the grace period, then remove power, inspect the line and sensor, and restart. The fault is intentionally latched so a failed pump does not retry unattended.
 
 ## Calibration Notes
 
@@ -101,6 +105,7 @@ AutoFlora-An-IoT-Framework-for-Urban-Roadside-Plantation/
   README.md
   docs/
     readme-preview.svg
+    USER_EXPERIENCE.md
 ```
 
 ## Future Improvements
@@ -115,6 +120,8 @@ AutoFlora-An-IoT-Framework-for-Urban-Roadside-Plantation/
 ## Safety Notes
 
 Use proper relay isolation, waterproofing, fuse protection, and pump power handling. Do not connect mains voltage directly unless you are qualified to work with electrical systems.
+
+The YF-S201 flow threshold is a protective signal, not a certified dry-run detector. Calibrate `FLOW_CALIBRATION` and `MIN_FLOW_LPM` against the installed pipe, sensor orientation, and expected pump output. A latched fault requires physical inspection and a controller restart; never bypass it remotely without confirming water supply and line integrity.
 
 ## Operator Experience
 

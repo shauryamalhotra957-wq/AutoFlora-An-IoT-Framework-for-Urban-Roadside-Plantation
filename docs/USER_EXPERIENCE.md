@@ -17,6 +17,7 @@ AutoFlora is a physical system. Its experience is the sequence of safe setup, re
 - `ACTUATOR`: physical pump state; never infer this from soil data alone.
 - `DECISION`: the rule that caused the actuator state.
 - `WARN`: degraded input or a condition requiring inspection.
+- `FAULT LATCHED`: irrigation is locked off after repeated commanded no-flow cycles; inspect the pump, supply, pipe, and flow sensor before restarting the controller.
 
 ## Safe interaction rules
 
@@ -24,6 +25,7 @@ AutoFlora is a physical system. Its experience is the sequence of safe setup, re
 - Use labels and icons in addition to red, amber, or green.
 - Show last-updated time and stale-data status for every remote view.
 - Require explicit confirmation for manual pump overrides and show the automatic timeout.
+- Never offer a remote “clear fault” action for a no-flow lockout without a verified on-site inspection.
 - Preserve a readable serial fallback when a graphical dashboard is unavailable.
 
 ## Future dashboard layout
