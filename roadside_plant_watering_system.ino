@@ -1,14 +1,6 @@
-// ================================================================
-// SMART IRRIGATION SYSTEM v3.0
-// Sensors : DHT22 | MH Soil Moisture | HC-SR04 | YF-S201
-// Board   : Arduino Uno
-// ================================================================
 
 #include <DHT.h>
 
-// ----------------------------------------------------------------
-// PIN DEFINITIONS
-// ----------------------------------------------------------------
 #define DHTPIN      7
 #define DHTTYPE     DHT22
 
@@ -18,52 +10,28 @@
 #define RELAY_PIN   8
 #define FLOW_PIN    3
 
-// ----------------------------------------------------------------
-// DHT SENSOR
-// ----------------------------------------------------------------
 DHT dht(DHTPIN, DHTTYPE);
 
-// ----------------------------------------------------------------
-// SOIL SENSOR CALIBRATION  (MH Resistive Series)
-// Dry air  -> ~1023  (no conductance)
-// Water    -> ~300   (high conductance)
-// Tune AIR_VALUE and WATER_VALUE with your actual sensor readings
-// ----------------------------------------------------------------
 #define AIR_VALUE    1023   // sensor in open air (fully dry)
 #define WATER_VALUE  300    // sensor submerged in water (fully wet)
 #define SOIL_DRY     700    // raw threshold -> trigger irrigation
 
-// ----------------------------------------------------------------
-// SYSTEM THRESHOLDS
-// ----------------------------------------------------------------
 #define HUMIDITY_THRESHOLD 70
 #define TEMP_THRESHOLD     20
 
 #define TANK_EMPTY         3.0
 #define TANK_DEPTH         30.0
 
-// ----------------------------------------------------------------
-// TIMING
-// ----------------------------------------------------------------
 #define READ_INTERVAL 2000UL
 
-// ----------------------------------------------------------------
-// GLOBAL VARIABLES
-// ----------------------------------------------------------------
 volatile unsigned long pulseCount = 0;
 unsigned long prevMillis = 0;
 
-// ----------------------------------------------------------------
-// FLOW SENSOR INTERRUPT
-// ----------------------------------------------------------------
 void countPulse()
 {
   pulseCount++;
 }
 
-// ----------------------------------------------------------------
-// HC-SR04 DISTANCE FUNCTION
-// ----------------------------------------------------------------
 float getDistance()
 {
   digitalWrite(TRIG_PIN, LOW);
@@ -85,9 +53,6 @@ float getDistance()
   return (duration * 0.0343) / 2.0;
 }
 
-// ----------------------------------------------------------------
-// SETUP
-// ----------------------------------------------------------------
 void setup()
 {
   Serial.begin(9600);
@@ -98,7 +63,7 @@ void setup()
   pinMode(ECHO_PIN, INPUT);
 
   pinMode(RELAY_PIN, OUTPUT);
-  digitalWrite(RELAY_PIN, HIGH); // Pump OFF
+  digitalWrite(RELAY_PIN, HIGH);
 
   pinMode(FLOW_PIN, INPUT_PULLUP);
 
@@ -118,9 +83,6 @@ void setup()
   Serial.println(F("[READY] Sensors active; pump is in safe OFF state"));
 }
 
-// ----------------------------------------------------------------
-// LOOP
-// ----------------------------------------------------------------
 void loop()
 {
   unsigned long now = millis();
@@ -129,9 +91,6 @@ void loop()
   {
     prevMillis = now;
 
-    // ============================================================
-    // FLOW SENSOR
-    // ============================================================
     noInterrupts();
     unsigned long pulses = pulseCount;
     pulseCount = 0;
@@ -140,9 +99,6 @@ void loop()
     float intervalSec = READ_INTERVAL / 1000.0;
     float flowRate = (pulses / intervalSec) / 7.5;
 
-    // ============================================================
-    // DHT22
-    // ============================================================
     float humidity = dht.readHumidity();
     float temperature = dht.readTemperature();
 
@@ -150,17 +106,13 @@ void loop()
       !isnan(humidity) &&
       !isnan(temperature);
 
-    // ============================================================
-    // SOIL SENSOR (MH Resistive)
-    // Higher raw value = drier soil
-    // ============================================================
     int soilRaw = analogRead(SOIL_PIN);
 
     int soilPercent =
       map(
         soilRaw,
-        AIR_VALUE,   // 1023 -> 0 %
-        WATER_VALUE, // 300  -> 100 %
+        AIR_VALUE,
+        WATER_VALUE,
         0,
         100
       );
@@ -178,9 +130,6 @@ void loop()
     else
       soilZone = "WET";
 
-    // ============================================================
-    // TANK LEVEL
-    // ============================================================
     float distance = getDistance();
 
     float waterLevel = TANK_DEPTH - distance;
@@ -194,9 +143,6 @@ void loop()
     tankPercent =
       constrain(tankPercent, 0, 100);
 
-    // ============================================================
-    // DECISION ENGINE
-    // ============================================================
     bool pumpON = false;
     String reason;
 
@@ -214,7 +160,7 @@ void loop()
       pumpON = false;
       reason = "RAIN PREDICTION";
     }
-    else if (soilRaw > SOIL_DRY)   // raw > 700 = dry on MH sensor
+    else if (soilRaw > SOIL_DRY)
     {
       pumpON = true;
       reason = "SOIL DRY - Irrigation ON";
@@ -225,17 +171,11 @@ void loop()
       reason = "SOIL OK";
     }
 
-    // ============================================================
-    // RELAY CONTROL
-    // ============================================================
     digitalWrite(
       RELAY_PIN,
       pumpON ? LOW : HIGH
     );
 
-    // ============================================================
-    // SERIAL DASHBOARD
-    // ============================================================
     Serial.println();
     Serial.println(F("========================================"));
 
