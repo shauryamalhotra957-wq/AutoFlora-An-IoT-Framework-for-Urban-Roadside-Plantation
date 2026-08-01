@@ -5,6 +5,9 @@
 // ================================================================
 
 #include <DHT.h>
+#include "irrigation_logic.h"
+
+using namespace autoflora;
 
 // ----------------------------------------------------------------
 // PIN DEFINITIONS
@@ -32,6 +35,10 @@ DHT dht(DHTPIN, DHTTYPE);
 #define AIR_VALUE    1023   // sensor in open air (fully dry)
 #define WATER_VALUE  300    // sensor submerged in water (fully wet)
 #define SOIL_DRY     700    // raw threshold -> trigger irrigation
+#define SOIL_WET     650    // raw threshold -> stop irrigation
+#define SOIL_VALID_MIN 50   // reject short-circuit / rail readings
+#define SOIL_VALID_MAX 1000 // reject open-circuit / disconnected readings
+#define SOIL_RECOVERY_SAMPLES 2
 
 // ----------------------------------------------------------------
 // SYSTEM THRESHOLDS
@@ -46,12 +53,22 @@ DHT dht(DHTPIN, DHTTYPE);
 // TIMING
 // ----------------------------------------------------------------
 #define READ_INTERVAL 2000UL
+#define MAX_PUMP_RUNTIME 120000UL
 
 // ----------------------------------------------------------------
 // GLOBAL VARIABLES
 // ----------------------------------------------------------------
 volatile unsigned long pulseCount = 0;
 unsigned long prevMillis = 0;
+const IrrigationConfig irrigationConfig = {
+  SOIL_VALID_MIN,
+  SOIL_VALID_MAX,
+  SOIL_DRY,
+  SOIL_WET,
+  SOIL_RECOVERY_SAMPLES,
+  MAX_PUMP_RUNTIME
+};
+IrrigationState irrigationState;
 
 // ----------------------------------------------------------------
 // FLOW SENSOR INTERRUPT
@@ -155,6 +172,8 @@ void loop()
     // Higher raw value = drier soil
     // ============================================================
     int soilRaw = analogRead(SOIL_PIN);
+    bool soilPlausible =
+      soilReadingPlausible(soilRaw, irrigationConfig);
 
     int soilPercent =
       map(
@@ -169,7 +188,9 @@ void loop()
 
     String soilZone;
 
-    if (soilPercent < 25)
+    if (!soilPlausible)
+      soilZone = "SENSOR FAULT";
+    else if (soilPercent < 25)
       soilZone = "VERY DRY";
     else if (soilPercent < 50)
       soilZone = "DRY";
@@ -197,32 +218,48 @@ void loop()
     // ============================================================
     // DECISION ENGINE
     // ============================================================
-    bool pumpON = false;
-    String reason;
-
-    if (waterLevel < TANK_EMPTY)
-    {
-      pumpON = false;
-      reason = "TANK LOW - Safety Shutoff";
-    }
-    else if (
+    bool rainExpected =
       dhtOK &&
       humidity >= HUMIDITY_THRESHOLD &&
-      temperature <= TEMP_THRESHOLD
-    )
+      temperature <= TEMP_THRESHOLD;
+    IrrigationInputs irrigationInputs = {
+      now,
+      soilRaw,
+      waterLevel < TANK_EMPTY,
+      rainExpected
+    };
+    IrrigationDecision decision =
+      decideIrrigation(
+        irrigationInputs,
+        irrigationConfig,
+        irrigationState
+      );
+    bool pumpON = decision.pumpOn;
+    String reason;
+
+    switch (decision.reason)
     {
-      pumpON = false;
-      reason = "RAIN PREDICTION";
-    }
-    else if (soilRaw > SOIL_DRY)   // raw > 700 = dry on MH sensor
-    {
-      pumpON = true;
-      reason = "SOIL DRY - Irrigation ON";
-    }
-    else
-    {
-      pumpON = false;
-      reason = "SOIL OK";
+      case DECISION_SOIL_SENSOR_INVALID:
+        reason = "SOIL SENSOR FAULT - Safety Shutoff";
+        break;
+      case DECISION_SOIL_SENSOR_RECOVERING:
+        reason = "SOIL SENSOR RECOVERING - Safety Shutoff";
+        break;
+      case DECISION_PUMP_RUNTIME_LIMIT:
+        reason = "MAX PUMP RUNTIME - Latched Safety Shutoff";
+        break;
+      case DECISION_TANK_LOW:
+        reason = "TANK LOW - Safety Shutoff";
+        break;
+      case DECISION_RAIN_EXPECTED:
+        reason = "RAIN PREDICTION";
+        break;
+      case DECISION_SOIL_DRY:
+        reason = "SOIL DRY - Irrigation ON";
+        break;
+      default:
+        reason = "SOIL OK";
+        break;
     }
 
     // ============================================================
@@ -265,6 +302,14 @@ void loop()
 
     Serial.print(F("Soil Zone   : "));
     Serial.println(soilZone);
+
+    if (!decision.soilValid)
+      Serial.println(F("[SOIL SENSOR ERROR] Reading outside plausible range; pump forced OFF"));
+    else if (!decision.soilSensorReady)
+      Serial.println(F("[SOIL SENSOR] Waiting for consecutive valid readings; pump forced OFF"));
+
+    if (decision.runtimeFaultLatched)
+      Serial.println(F("[SAFETY] Maximum pump runtime reached; restart required"));
 
     Serial.println(F("----------------------------------------"));
 
