@@ -45,6 +45,9 @@ Roadside plantations are often hard to maintain manually because water need chan
 - Measures tank level using ultrasonic distance.
 - Counts flow sensor pulses through an interrupt.
 - Turns the pump on only when the soil is dry and the tank is not too low.
+- Rejects implausible soil readings and requires two valid samples before recovery.
+- Uses separate dry/start and wet/stop thresholds to prevent relay chatter.
+- Latches the pump off after two minutes of continuous commanded runtime.
 - Avoids irrigation when humidity and temperature suggest rain-like conditions.
 - Prints sensor state, flow rate, tank level, and pump decision to Serial.
 
@@ -52,6 +55,9 @@ Roadside plantations are often hard to maintain manually because water need chan
 
 ```text
 Read sensors
+  -> validate soil sensor and recovery samples
+  -> update moisture demand with hysteresis
+  -> enforce maximum continuous pump runtime
   -> check tank safety
   -> check rain-like weather condition
   -> check soil dryness
@@ -62,6 +68,8 @@ Read sensors
 The pump is disabled when:
 
 - The tank level is below the safety threshold.
+- The soil reading is outside the plausible `50..1000` raw range or has not yet produced two consecutive valid recovery samples.
+- The pump has reached `120000 ms` of continuous commanded runtime. This fault is latched until restart.
 - Humidity is high and temperature is low enough to suggest rain-like conditions.
 - Soil moisture is already sufficient.
 
@@ -89,9 +97,12 @@ The soil sensor calibration constants are project-specific:
 #define AIR_VALUE    1023
 #define WATER_VALUE  300
 #define SOIL_DRY     700
+#define SOIL_WET     650
+#define SOIL_VALID_MIN 50
+#define SOIL_VALID_MAX 1000
 ```
 
-Measure your sensor in dry air, water, and actual soil before field use.
+Measure your sensor in dry air, water, and actual soil before field use. Irrigation starts only above `SOIL_DRY` and continues until the reading reaches `SOIL_WET`; keep a meaningful gap between those thresholds. Rail-adjacent readings are treated as a shorted or disconnected sensor and fail safe with the pump off.
 
 ## Repository Structure
 
