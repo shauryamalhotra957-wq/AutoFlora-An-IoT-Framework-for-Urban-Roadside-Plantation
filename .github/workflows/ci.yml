@@ -1,0 +1,38 @@
+name: Arduino CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compile:
+    name: Compile for Arduino Uno
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Arduino CLI
+        uses: arduino/setup-arduino-cli@v2
+
+      - name: Install board core and sensor libraries
+        run: |
+          arduino-cli core update-index
+          arduino-cli core install arduino:avr
+          arduino-cli lib update-index
+          arduino-cli lib install "DHT sensor library"
+          arduino-cli lib install "Adafruit Unified Sensor"
+
+      - name: Compile firmware
+        run: arduino-cli compile --fqbn arduino:avr:uno roadside_plant_watering_system.ino
