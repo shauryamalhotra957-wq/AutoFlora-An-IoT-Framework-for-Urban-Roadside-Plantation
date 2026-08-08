@@ -8,7 +8,7 @@ AutoFlora is a physical system. Its experience is the sequence of safe setup, re
 2. Confirm the `READY` state and verify each sensor reading.
 3. Calibrate dry and wet soil values and tank depth on site.
 4. Enable the pump only after the first valid telemetry cycle.
-5. Monitor the actuator state and its decision reason together.
+5. Monitor the actuator state and its decision reason together.  
 
 ## State language
 
