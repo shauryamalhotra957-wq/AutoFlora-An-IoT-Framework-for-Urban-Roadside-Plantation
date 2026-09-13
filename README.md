@@ -1,5 +1,8 @@
 # AutoFlora: IoT Framework for Urban Roadside Plantation
 
+[![CI](https://github.com/shauryamalhotra957-wq/AutoFlora-An-IoT-Framework-for-Urban-Roadside-Plantation/actions/workflows/ci.yml/badge.svg)](https://github.com/shauryamalhotra957-wq/AutoFlora-An-IoT-Framework-for-Urban-Roadside-Plantation/actions) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+
 AutoFlora is an Arduino-based smart irrigation prototype for urban roadside plantation. It combines soil moisture sensing, weather-aware decision logic, tank-level monitoring, flow telemetry, and pump control to water plants only when conditions are safe and useful.
 
 ![AutoFlora smart irrigation architecture](docs/readme-preview.svg)
@@ -119,4 +122,3 @@ Use proper relay isolation, waterproofing, fuse protection, and pump power handl
 ## Operator Experience
 
 Serial telemetry uses explicit `READY`, `SENSOR ERROR`, `ACTUATOR`, and `DECISION` states so a field operator can distinguish readings from actions at a glance. The [operator experience guide](docs/USER_EXPERIENCE.md) documents setup, calibration, safe fallback, and future dashboard behavior.
-
