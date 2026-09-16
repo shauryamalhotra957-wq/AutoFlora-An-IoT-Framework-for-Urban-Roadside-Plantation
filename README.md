@@ -62,6 +62,23 @@ Read sensors
   -> print telemetry
 ```
 
+## Software-in-the-Loop (SIL) Testing
+
+The repository includes a digital-twin simulation harness in `sim/` to verify control state machines and emergency cutoffs automatically without hardware:
+
+```bash
+# Run automated SIL tests
+python -m unittest discover -s sim
+```
+
+Covered test vectors:
+- Resistive ADC calibration to moisture percentage
+- Ultrasonic tank level computation
+- Low-water emergency dry-run pump cutoff
+- High-humidity (rain prevention) suppression
+- Cold ambient temperature reduced evapotranspiration handling
+
+
 The pump is disabled when:
 
 - The tank level is below the safety threshold.
