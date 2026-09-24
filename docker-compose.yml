@@ -1,0 +1,7 @@
+version: '3.8'
+services:
+  autoflora-sim:
+    build: .
+    volumes:
+      - .:/app
+    command: python sim/benchmark_controller.py
