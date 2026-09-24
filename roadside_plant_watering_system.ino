@@ -16,9 +16,9 @@
 DHT dht(DHTPIN, DHTTYPE);
 
 
-#define AIR_VALUE    1023   // sensor in open air (fully dry)
-#define WATER_VALUE  300    // sensor submerged in water (fully wet)
-#define SOIL_DRY     700    // raw threshold -> trigger irrigation
+#define AIR_VALUE    1023 
+#define WATER_VALUE  300   
+#define SOIL_DRY     700    
 
 #define HUMIDITY_THRESHOLD 70
 #define TEMP_THRESHOLD     20
